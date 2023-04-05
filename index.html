@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>reveal.js</title>
+
+		<link rel="stylesheet" href="dist/reset.css">
+		<link rel="stylesheet" href="dist/reveal.css">
+		<link rel="stylesheet" href="dist/theme/black.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h3>Dependency injection</h3>
+					<h4>(for five-year olds)</h4>
+               <blockquote cite="https://en.wikipedia.org/wiki/Dependency_injection">
+                  <small>
+                      When you go and get things out of the refrigerator for yourself, you can cause problems. You might leave the door open, you might get something Mommy or Daddy don't want you to have. You might even be looking for something we don't even have or which has expired.
+
+    What you should be doing is stating a need, "I need something to drink with lunch," and then we will make sure you have something when you sit down to eat something.
+    <br>
+John Munsch, 28 October 2009. 
+                  </small>
+              </blockquote>
+				</section>
+				<section>
+					<h3>Problem</h3>
+					<ul>
+                  <li><a href="https://fluxim.atlassian.net/browse/SET-3009"></a>SET-3009: Stop and keep results in transient</li>
+						<li>Simulation results should be kept upon stop</li>
+						<li>How can we unit test the stop signal?</li>
+					</ul>
+				</section>
+				<section>
+					<h3>Solution</h3>
+					<h4>Introduce Dummy Solver</h4>
+               <img src="basic_idea.svg"  height="200">
+				</section>
+				<section>
+					<h3>Interface Newton Solver</h3>
+               <pre><code data-trim data-noescape class="language-cpp">
+               class NewtonSolverInterface {
+                  public:
+                     virtual void solveNewton(...) = 0;
+               };
+
+               class NewtonSolverTest : public NewtonSolverInterface {
+                  public:
+                     void solveNewton(...) override = {
+                        StopComputation::get().stopComputation();
+                     }
+               };
+               </code></pre>
+				</section>
+				<section>
+					<h3>Newton Solver Factory</h3>
+               <pre><code data-trim data-noescape class="language-cpp">
+               class NewtonSolverFactoryInterface {
+                  public:
+                     virtual std::unique_ptr&lt;NewtonSolverInterface&gt; getSolver() = 0;
+               };
+
+               class NewtonSolverFactoryTest : public NewtonSolverFactoryInterface {
+                  public:
+                     std::unique_ptr&lt;NewtonSolverInterface&gt; getSolver() override {
+                        return std::make_unique&lt;NewtonSolverTest&gt;();
+                  }
+               };
+               </code></pre>
+				</section>
+				<section>
+					<h3>TaskSteadyState</h3>
+               <pre><code data-trim data-noescape class="language-cpp">
+               class TaskSteadyState {
+                  public:
+                     TaskSteadyState(..., NewtonSolverFactoryInterface &factory);
+
+                  private:
+                     NewtonSolverFactoryInterface &factory_; 
+               };
+
+               TaskSteadyState::solveNewton(...) {
+                  std::unique_ptr&lt;NewtonSolverInterface&gt; newtonSolver
+                     = factory_.getSolver(); 
+               };
+               </code></pre>
+				</section>
+            <section>
+            <section> Pros and Cons
+					<ul>
+						<li style="color:green">Makes things unit-testable</li>
+						<li style="color:green">Standard pattern</li>
+						<li style="color:red">Boiler plate code</li>
+						<li style="color:red">Introduces virtual functions (confusing)</li>
+						<li style="color:red">Virtual functions might be costly</li>
+					</ul>
+            </section>
+					<section>
+						<h2>Virtual function calls</h2>
+                  <img src="vpointer.png"  height="200" style="background-color:cornsilk;">
+					</section>
+          </section>
+
+			</div>
+		</div>
+
+		<script src="dist/reveal.js"></script>
+		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/markdown/markdown.js"></script>
+		<script src="plugin/highlight/highlight.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+			});
+		</script>
+	</body>
+</html>
